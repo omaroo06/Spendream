@@ -1,0 +1,48 @@
+name: spend_dream
+description: "A new Flutter project."
+# The following line prevents the package from being accidentally published to
+# pub.dev using `flutter pub publish`. This is preferred for private packages.
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+
+version: 0.0.1+1
+
+environment:
+  sdk: ^3.1.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  desktop_webview_auth: ^0.0.15
+
+  english_words: ^4.0.0
+  provider: ^6.0.0
+  #firebase_core: ^3.8.0
+  #firebase_auth: ^5.3.3
+  #firebase_ui_auth: ^1.16.0
+
+  firebase_core: ^3.8.0
+  firebase_auth: ^5.3.3 
+  firebase_ui_auth: ^1.16.0
+  fl_chart: ^0.69.2
+  
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+ 
+  flutter_lints: ^2.0.0
+  flutter_launcher_icons: ^0.12.0
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/Spendream.png"
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/app_logo.png
+    - assets/Spendream.png
+    - assets/LoginLogo.png
+    - assets/newLogin.png
