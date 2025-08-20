@@ -26,8 +26,9 @@ class MyBarGraph extends StatelessWidget {
       titlesData:FlTitlesData(
         show:true,
         bottomTitles:AxisTitles(
-          axisNameWidget: Text('Months',style:TextStyle(fontWeight: FontWeight.bold,decoration: TextDecoration.underline),),
-          axisNameSize: 34,
+          axisNameWidget: Text('Months',style:TextStyle(fontWeight: FontWeight.bold,decoration: TextDecoration.underline,fontSize: 14*appState.scaleWidth),),
+          axisNameSize:34*appState.scaleWidth,
+          
           sideTitles: SideTitles(
             showTitles: true,
             getTitlesWidget:(value,meta){
@@ -41,8 +42,10 @@ class MyBarGraph extends StatelessWidget {
           ),
           ),
           topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          //leftTitles: AxisTitles(axisNameWidget: Text("Amount (\$)"))
+          //rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+         rightTitles: AxisTitles(axisNameWidget: Transform.flip(flipX: true,flipY: true,child:  Text("Amount (\$)",style: TextStyle(fontWeight: FontWeight.bold,decoration: TextDecoration.underline,fontSize: 14*appState.scaleWidth))),axisNameSize: 34*appState.scaleWidth),
+          
+         
         ),
         
       
@@ -58,7 +61,7 @@ class MyBarGraph extends StatelessWidget {
           
             x:data.x,
             
-            barRods: [BarChartRodData(toY: data.y,width: 10,color:Colors.red)]
+            barRods: [BarChartRodData(toY: data.y,width: 10*appState.scaleWidth,color:Colors.red)]
           
           )
         )

@@ -1,9 +1,16 @@
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 import 'app.dart';
+
 import 'ExpensesClass.dart';
 import 'DateClass.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_ui_auth/firebase_ui_auth.dart';
+import 'auth_gate.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide EmailAuthProvider;
+import 'dart:async';
 
 class ExpensesPage extends StatefulWidget {
   const ExpensesPage({super.key});
@@ -20,7 +27,7 @@ class _ExpensesPageState extends State<ExpensesPage> {
   bool editButtonPressed = false;
 
   var dateEdited;
-
+  var EIDtoPreserve;
   var dateToEdit;
   var categoryToEdit;
   String sortAmount = "Cost";
@@ -34,11 +41,11 @@ class _ExpensesPageState extends State<ExpensesPage> {
   bool SortCategory = false;
 
   final TextEditingController categoryController = TextEditingController();
-
+  var expensesLen;
   int indexToEdit = -1;
-
+  String whichCatSortString="assets/AtoZZZZZZ.png";
   var expenses;
-
+  var appState;
   double totalExpense = 0;
   DateTime? pickedDate;
 
@@ -46,11 +53,11 @@ class _ExpensesPageState extends State<ExpensesPage> {
     setState(() {
       if (SortCategory == false) {
         sortAMethod();
-
+        whichCatSortString="assets/ZtoAA.png";
         SortCategory = true;
       } else {
         sortZMethod();
-
+        whichCatSortString="assets/AtoZZZZZZ.png";
         SortCategory = false;
       }
     });
@@ -60,18 +67,20 @@ class _ExpensesPageState extends State<ExpensesPage> {
     setState(() {
       int A;
 
-      for (var i = 0; i < expenses.length; i++) {
+      for (var i = 0; i < appState.listOfExpenses.length; i++) {
         A = i;
 
-        for (int j = i + 1; j < expenses.length; j++) {
-          if (expenses[j].category.compareTo(expenses[A].category) < 0) {
+        for (int j = i + 1; j < appState.listOfExpenses.length; j++) {
+          if (appState.listOfExpenses[j].category
+                  .compareTo(appState.listOfExpenses[A].category) <
+              0) {
             A = j;
           }
         }
         if (i != A) {
-          var temp = expenses[i];
-          expenses[i] = expenses[A];
-          expenses[A] = temp;
+          var temp = appState.listOfExpenses[i];
+          appState.listOfExpenses[i] = appState.listOfExpenses[A];
+          appState.listOfExpenses[A] = temp;
         }
       }
     });
@@ -81,18 +90,20 @@ class _ExpensesPageState extends State<ExpensesPage> {
     setState(() {
       int Z;
 
-      for (var i = 0; i < expenses.length; i++) {
+      for (var i = 0; i < appState.listOfExpenses.length; i++) {
         Z = i;
 
-        for (int j = i + 1; j < expenses.length; j++) {
-          if (expenses[j].category.compareTo(expenses[Z].category) > 0) {
+        for (int j = i + 1; j < appState.listOfExpenses.length; j++) {
+          if (appState.listOfExpenses[j].category
+                  .compareTo(appState.listOfExpenses[Z].category) >
+              0) {
             Z = j;
           }
         }
         if (i != Z) {
-          var temp = expenses[i];
-          expenses[i] = expenses[Z];
-          expenses[Z] = temp;
+          var temp = appState.listOfExpenses[i];
+          appState.listOfExpenses[i] = appState.listOfExpenses[Z];
+          appState.listOfExpenses[Z] = temp;
         }
       }
     });
@@ -116,18 +127,18 @@ class _ExpensesPageState extends State<ExpensesPage> {
     setState(() {
       int old;
 
-      for (var i = 0; i < expenses.length; i++) {
+      for (var i = 0; i < appState.listOfExpenses.length; i++) {
         old = i;
 
-        for (int j = i + 1; j < expenses.length; j++) {
+        for (int j = i + 1; j < appState.listOfExpenses.length; j++) {
           if (calculateDateValue(j) < calculateDateValue(old)) {
             old = j;
           }
         }
         if (i != old) {
-          var temp = expenses[i];
-          expenses[i] = expenses[old];
-          expenses[old] = temp;
+          var temp = appState.listOfExpenses[i];
+          appState.listOfExpenses[i] = appState.listOfExpenses[old];
+          appState.listOfExpenses[old] = temp;
         }
       }
     });
@@ -137,45 +148,49 @@ class _ExpensesPageState extends State<ExpensesPage> {
     setState(() {
       int neww;
 
-      for (var i = 0; i < expenses.length; i++) {
+      for (var i = 0; i < appState.listOfExpenses.length; i++) {
         neww = i;
 
-        for (int j = i + 1; j < expenses.length; j++) {
+        for (int j = i + 1; j < appState.listOfExpenses.length; j++) {
           if (calculateDateValue(j) > calculateDateValue(neww)) {
             neww = j;
           }
         }
         if (i != neww) {
-          var temp = expenses[i];
-          expenses[i] = expenses[neww];
-          expenses[neww] = temp;
+          var temp = appState.listOfExpenses[i];
+          appState.listOfExpenses[i] = appState.listOfExpenses[neww];
+          appState.listOfExpenses[neww] = temp;
         }
       }
     });
   }
 
   double calculateDateValue(int index) {
-    return ((expenses[index].date.year - (DateTime.now().year) - 10) * 365) +
-        (expenses[index].date.month * 30.473) +
-        (expenses[index].date.day);
+    return ((appState.listOfExpenses[index].date.year -
+                (DateTime.now().year) -
+                10) *
+            365) +
+        (appState.listOfExpenses[index].date.month * 30.473) +
+        (appState.listOfExpenses[index].date.day);
   }
 
   void sortHiMethod() {
     setState(() {
       int max;
 
-      for (var i = 0; i < expenses.length; i++) {
+      for (var i = 0; i < appState.listOfExpenses.length; i++) {
         max = i;
 
-        for (int j = i + 1; j < expenses.length; j++) {
-          if (expenses[j].amount > expenses[max].amount) {
+        for (int j = i + 1; j < appState.listOfExpenses.length; j++) {
+          if (appState.listOfExpenses[j].amount >
+              appState.listOfExpenses[max].amount) {
             max = j;
           }
         }
         if (i != max) {
-          var temp = expenses[i];
-          expenses[i] = expenses[max];
-          expenses[max] = temp;
+          var temp = appState.listOfExpenses[i];
+          appState.listOfExpenses[i] = appState.listOfExpenses[max];
+          appState.listOfExpenses[max] = temp;
         }
       }
     });
@@ -199,19 +214,19 @@ class _ExpensesPageState extends State<ExpensesPage> {
     setState(() {
       int min;
 
-      for (var i = 0; i < expenses.length; i++) {
+      for (var i = 0; i < appState.listOfExpenses.length; i++) {
         min = i;
 
-        for (int j = i + 1; j < expenses.length; j++) {
-          if (expenses[j].amount < expenses[min].amount) {
+        for (int j = i + 1; j < appState.listOfExpenses.length; j++) {
+          if (expenses[j].amount < appState.listOfExpenses[min].amount) {
             min = j;
           }
         }
 
         if (i != min) {
-          var temp = expenses[i];
-          expenses[i] = expenses[min];
-          expenses[min] = temp;
+          var temp = appState.listOfExpenses[i];
+          appState.listOfExpenses[i] = expenses[min];
+          appState.listOfExpenses[min] = temp;
         }
       }
     });
@@ -228,244 +243,287 @@ class _ExpensesPageState extends State<ExpensesPage> {
 
   @override
   Widget build(BuildContext context) {
-    var appState = context.watch<MyAppState>();
-
+    appState = context.watch<MyAppState>();
+    FirebaseAuth auth = FirebaseAuth.instance;
+    final User? user = auth.currentUser;
+     final double scalee=appState.scale;
+     double scaleW=appState.scaleWidth;
+     double scaleH=appState.scaleHeight;
+     
+     
+    
+    if (appState.hastheMethodbeencalledyet == false) {
+      appState.getAllExpensesinListforUser();
+    }
     expenses = appState.listOfExpenses;
 
+    appState.getCount();
     return Container(
       child: Center(
           child: Column(
         children: [
-          const SizedBox(height: 20),
+          SizedBox(height: 20*scaleH),
           Row(
             children: [
               Expanded(
                 child: Transform.scale(
-                  scale: 1,
+                  
+                  scale:1,
                   child: TextFormField(
                     enableSuggestions: false,
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(
                           RegExp(r'^\d*\.{0,1}\d*$'))
                     ],
-                    keyboardType: TextInputType.number,
+                    //keyboardType: TextInputType.text,
+                    //removing the keyboard type bc need decimal and need to close the keyboard
                     controller: amountController,
                     maxLength: 9,
-                    decoration: const InputDecoration(
-                      icon: Icon(Icons.attach_money),
+                    style: TextStyle(fontSize: 14*scaleW),
+                    decoration:  InputDecoration(
+                       icon: Icon(Icons.attach_money,size: 24*scaleW,),
                       hintText: "",
                       counterText: '',
                       labelText: "Amount (\$)",
-                      labelStyle: TextStyle(fontSize: 15),
+                      labelStyle: TextStyle(fontSize: (15*scaleW)),
                     ),
                   ),
                 ),
               ),
               Expanded(
                 child: Transform.scale(
-                  scale: 1,
+                  
+                  scale:1,
                   child: TextFormField(
                       controller: yearController,
-                      decoration: const InputDecoration(
+                      decoration:  InputDecoration(
                         labelText: "Date",
-                        labelStyle: TextStyle(fontSize: 15),
-                        icon: Icon(Icons.date_range),
+                        labelStyle: TextStyle(fontSize: 15*scaleW),
+                        icon:  Icon(Icons.date_range,size:24*scaleW),
+                        
                       ),
+                      style:TextStyle(fontSize: 14*scaleW),
                       readOnly: true,
                       onTap: () async {
                         pickedDate = await showDatePicker(
                           context: context,
                           initialDate: DateTime.now(),
                           firstDate: DateTime((DateTime.now().year) - 10),
-                          lastDate: DateTime((DateTime.now().year) + 10),
+                          lastDate: DateTime(
+                              DateTime.now().year,
+                              DateTime.now().month,
+                              DateTime.now().day,
+                              23,
+                              59,
+                              59,
+                              999),
                         );
+                        
                         if (pickedDate != null) {
                           yearController.text =
                               "${pickedDate!.month}/${pickedDate!.day}/${pickedDate!.year}";
+                          
                         }
+                        
                       }),
                 ),
               ),
-              const SizedBox(width: 5),
-              Transform.scale(scale: 1, child: Icon(Icons.category)),
+              SizedBox(width: 5*scaleW),
+              Transform.scale(
+                
+                scale:1,
+                child: Icon(Icons.category,size: 24*scaleW,)),
               Expanded(
                 child: Transform.scale(
-                    scale: 1,
+                   
+                    scale:1,
                     child: DropdownMenu(
                       controller: categoryController,
                       onSelected: (string) {
                         if (string != null) {
                           setState(() {
-                            category = string;
+                            {
+                              categorySelect(string);
+                            }
                           });
                         }
                       },
-                      width: 134,
+                     
+                      width: 134*scaleW,
+                    
                       menuHeight: 300,
-                      textStyle: TextStyle(fontSize: 10),
+                      textStyle: TextStyle(fontSize: 10*scaleW),
                       helperText: "Select Category",
+                      
                       label: Text(
                         "Category",
-                        style: TextStyle(fontSize: 10),
+                        style: TextStyle(fontSize: 10*scaleW*0.835),
                       ),
-                      enableSearch: true,
-                      enableFilter: true,
-                      dropdownMenuEntries: const <DropdownMenuEntry<String>>[
+                      
+                      dropdownMenuEntries: <DropdownMenuEntry<String>>[
                         DropdownMenuEntry(
-                            leadingIcon: Icon(Icons.house),
+                            leadingIcon: const Icon(Icons.house),
                             value: "Housing",
                             label: 'Housing',
                             labelWidget: Text(
                               "Housing",
-                              style: TextStyle(fontSize: 10),
+                              
+                              
+                              style: TextStyle(fontSize: 10*scaleW),
                             )),
-                        DropdownMenuEntry(
+                         DropdownMenuEntry(
                             leadingIcon: Icon(Icons.emoji_transportation),
                             value: "Transportation",
                             label: 'Transportation',
                             labelWidget: Text(
                               "Transportation",
-                              style: TextStyle(fontSize: 10),
+                              style: TextStyle(fontSize: 10*scaleW),
                             )),
-                        DropdownMenuEntry(
+                         DropdownMenuEntry(
                             leadingIcon: Icon(Icons.fastfood),
                             value: "Food",
                             label: 'Food',
                             labelWidget: Text(
                               "Food",
-                              style: TextStyle(fontSize: 10),
+                              style: TextStyle(fontSize: 10*scaleW),
                             )),
-                        DropdownMenuEntry(
+                         DropdownMenuEntry(
                             leadingIcon: Icon(Icons.lightbulb),
                             value: "Utilities",
                             label: 'Utilities',
                             labelWidget: Text(
                               "Utilities",
-                              style: TextStyle(fontSize: 10),
+                              style: TextStyle(fontSize: 10*scaleW),
                             )),
-                        DropdownMenuEntry(
+                         DropdownMenuEntry(
                             leadingIcon: Icon(Icons.monitor_heart),
                             value: "Insurance",
                             label: 'Insurance',
                             labelWidget: Text("Insurance",
-                                style: TextStyle(fontSize: 10))),
-                        DropdownMenuEntry(
+                                style: TextStyle(fontSize: 10*scaleW))),
+                         DropdownMenuEntry(
                             leadingIcon: Icon(Icons.medical_services),
                             value: "Healthcare",
                             label: 'Healthcare',
                             labelWidget: Text(
                               "Healthcare",
-                              style: TextStyle(fontSize: 10),
+                              style: TextStyle(fontSize: 10*scaleW),
                             )),
-                        DropdownMenuEntry(
+                         DropdownMenuEntry(
                             leadingIcon: Icon(Icons.monetization_on),
                             value: "Savings",
                             label: 'Savings',
                             labelWidget: Text(
                               "Savings",
-                              style: TextStyle(fontSize: 10),
+                              style: TextStyle(fontSize: 10*scaleW),
                             )),
-                        DropdownMenuEntry(
+                         DropdownMenuEntry(
                             leadingIcon: Icon(Icons.shop),
                             value: "Personal",
                             label: 'Personal',
                             labelWidget: Text(
                               "Personal",
-                              style: TextStyle(fontSize: 10),
+                              style: TextStyle(fontSize: 10*scaleW),
                             )),
-                        DropdownMenuEntry(
+                         DropdownMenuEntry(
                             leadingIcon: Icon(Icons.movie),
                             value: "Entertainment",
                             label: 'Entertainment',
                             labelWidget: Text(
                               "Entertainment",
-                              style: TextStyle(fontSize: 10),
+                              style: TextStyle(fontSize: 10*scaleW),
                             )),
-                        DropdownMenuEntry(
+                         DropdownMenuEntry(
                             leadingIcon: Icon(Icons.miscellaneous_services),
                             value: "Miscellaneous",
                             label: 'Miscellaneous',
                             labelWidget: Text(
                               "Miscellaneous",
-                              style: TextStyle(fontSize: 10),
+                              style: TextStyle(fontSize: 10*scaleW),
                             )),
                       ],
                     )),
               ),
             ],
           ),
-          SizedBox(height: 20),
+          SizedBox(height: 20*scaleH),
+         
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (editButtonPressed == false) ...[
                 ElevatedButton.icon(
-                  onPressed: () {
-                    setState(() {
+                  onPressed: () async {
+                    if (!mounted) return; 
+                    try {
                       String a = amountController.text;
 
-                      try {
-                        double amountToAdd = double.parse(a);
-                        if (pickedDate != null && category != null) {
-                          Date dateToAdd = Date(
-                              day: pickedDate!.day,
-                              month: pickedDate!.month,
-                              year: pickedDate!.year);
-                          Expenses expensetoAdd = Expenses(
-                              date: dateToAdd,
-                              category: category,
-                              amount: amountToAdd);
-                          if (category == "Housing") {
-                            appState.addToHousingAmount(amountToAdd);
-                          } else if (category == "Transportation") {
-                            appState.addToTransportationAmount(amountToAdd);
-                          } else if (category == "Food") {
-                            appState.addToFoodAmount(amountToAdd);
-                          } else if (category == "Utilities") {
-                            appState.addToUtilitiesAmount(amountToAdd);
-                          } else if (category == "Insurance") {
-                            appState.addToInsuranceAmount(amountToAdd);
-                          } else if (category == "Healthcare") {
-                            appState.addToHealthcareAmount(amountToAdd);
-                          } else if (category == "Savings") {
-                            appState.addToSavingsAmount(amountToAdd);
-                          } else if (category == "Personal") {
-                            appState.addToPersonalAmount(amountToAdd);
-                          } else if (category == "Entertainment") {
-                            appState.addToEntertainmentAmount(amountToAdd);
-                          } else {
-                            appState.addToMiscAmount(amountToAdd);
-                          }
+                      double amountToAdd = double.parse(a);
+                      if (pickedDate != null && category != null) {
+                        Date dateToAdd = Date(
+                            day: pickedDate!.day,
+                            month: pickedDate!.month,
+                            year: pickedDate!.year);
+                        DateTime dateAdd = DateTime(
+                            dateToAdd.year, dateToAdd.month, dateToAdd.day);
+                        Timestamp date = Timestamp.fromDate(dateAdd);
 
-                          appState.listOfExpenses.add(expensetoAdd);
-                          //expenses.add(expensetoAdd);
-                          yearController.clear();
-                          amountController.clear();
-                          categoryController.clear();
-                          category = null;
-                          totalExpense += expensetoAdd.amount;
-                          appState.addToTotalExpenses(expensetoAdd.amount);
-                          appState.colorForEditButton=const Color.fromARGB(255, 234, 196, 130);
-                          appState.colorForDeleteButton=const Color.fromARGB(255, 239, 71, 71);
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                backgroundColor:
-                                    Color.fromARGB(255, 222, 157, 6),
-                                content: Row(
-                                  children: [
-                                    Icon(Icons.error),
-                                    Text(
-                                        "ERROR: Please fill in all required fields",
-                                        style: TextStyle(fontSize: 14)),
-                                  ],
-                                )),
-                          );
+                        String EID = "hi";
+                        void transmitEIDvalue(String e) {
+                          setState(() {
+                            EID = e;
+                          });
                         }
-                      } catch (error) {
+
+                        String categoryToAd = category;
+                        if (user != null) {
+                          String uid = user.uid;
+                          final FirebaseFirestore firestore =
+                              FirebaseFirestore.instance;
+
+                          CollectionReference expensesCollection =
+                              firestore.collection('Expenses');
+                          expensesCollection.add({
+                            'Amount': amountToAdd,
+                            'Category': category,
+                            'userID': uid,
+                            'ExpenseID': "",
+                            'Date': date,
+                          }).then((DocumentReference doc) {
+                            EID = doc.id;
+                            doc.update({'ExpenseID': doc.id});
+                           
+                           
+                            if (categoryToAd != null) {
+                              setState(() {
+                                appState.addNewExpenseToExpenseList(
+                                    categoryToAd, amountToAdd, EID, dateToAdd);
+                              });
+                            } else {
+                              
+                            }
+                          });
+                        }
+
+                        await appState.getCount();
+
+                        await appState.AddToCagtegoryAmount(amountToAdd, category);
+                        await appState.getCatTotal();
+                        setState(() {});
+                        yearController.clear();
+                        amountController.clear();
+                        categoryController.clear();
+                        category = null;
+                       
+                        appState.colorForEditButton =
+                            const Color.fromARGB(255, 234, 196, 130);
+                        appState.colorForDeleteButton =
+                            const Color.fromARGB(255, 239, 71, 71);
+                      } else {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                               backgroundColor: Color.fromARGB(255, 222, 157, 6),
+                              duration: const Duration(seconds: 1),
                               content: Row(
                                 children: [
                                   Icon(Icons.error),
@@ -476,11 +534,26 @@ class _ExpensesPageState extends State<ExpensesPage> {
                               )),
                         );
                       }
-                    });
+                    } catch (error) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            backgroundColor: Color.fromARGB(255, 222, 157, 6),
+                            duration: Duration(seconds: 1),
+                            content: Row(
+                              children: [
+                                Icon(Icons.error),
+                                Text(
+                                    "ERROR: Please fill in all required fields",
+                                    style: TextStyle(fontSize: 14)),
+                              ],
+                            )),
+                      );
+                    }
                   },
                   icon: Icon(
                     Icons.add,
                     color: appState.scheme.onSecondaryContainer,
+                    size:24*scaleW,
                   ),
                   style: ButtonStyle(
                       backgroundColor: WidgetStatePropertyAll<Color>(
@@ -488,24 +561,28 @@ class _ExpensesPageState extends State<ExpensesPage> {
                   label: Text(
                     "Add Expense",
                     style:
-                        TextStyle(color: appState.scheme.onSecondaryContainer),
+                        TextStyle(color: appState.scheme.onSecondaryContainer,fontSize: 14*scaleW),
                   ),
                 ),
-                const SizedBox(width: 10),
-                ElevatedButton(
+                 SizedBox(width: 10*scaleW),
+                ElevatedButton.icon(
+                 
                   onPressed: clearButtonmethod,
                   style: ButtonStyle(
                       backgroundColor: WidgetStatePropertyAll<Color>(
                           appState.scheme.secondaryContainer)),
-                  child: Text(
+                  label: Text(
                     "Clear",
                     style:
-                        TextStyle(color: appState.scheme.onSecondaryContainer),
+                        TextStyle(color: appState.scheme.onSecondaryContainer,fontSize: 14*scaleW*1.13),
                   ),
                 ),
+                
+                
               ] else ...[
                 ElevatedButton.icon(
-                  onPressed: () => setState(() {
+                  onPressed: () async {
+                    if (!mounted) return; 
                     Date dateToAdd = Date(year: 1995, month: 9, day: 3);
                     String a = amountController.text;
                     if (yearController.text == dateToEdit) {
@@ -516,155 +593,137 @@ class _ExpensesPageState extends State<ExpensesPage> {
                     }
                     if ((pickedDate != null || dateToAdd == dateEdited) &&
                         category != null) {
-                      try {
-                        double amountToAdd = double.parse(a);
-                        Expenses expenseToDelete = expenses[indexToEdit];
-                        double amountToDelete = expenseToDelete.amount;
-                        String cat =
-                            appState.getCategory(expenses[indexToEdit]);
-                        if (cat == "Housing") {
-                          appState.removeHousingAmount(amountToDelete);
-                        } else if (cat == "Transportation") {
-                          appState.removeTransportationAmount(amountToDelete);
-                        } else if (cat == "Food") {
-                          appState.removeFoodAmount(amountToDelete);
-                        } else if (cat == "Utilities") {
-                          appState.removeUtilitiesAmount(amountToDelete);
-                        } else if (cat == "Insurance") {
-                          appState.removeInsuranceAmount(amountToDelete);
-                        } else if (cat == "Healthcare") {
-                          appState.removeHealthcareAmount(amountToDelete);
-                        } else if (cat == "Savings") {
-                          appState.removeSavingsAmount(amountToDelete);
-                        } else if (cat == "Personal") {
-                          appState.removePersonalAmount(amountToDelete);
-                        } else if (cat == "Entertainment") {
-                          appState.removeEntertainmentAmount(amountToDelete);
-                        } else {
-                          appState.removeMiscAmount(amountToDelete);
-                        }
+                      
+                      double amountToAdd = double.parse(a);
+                      Expenses expenseToDelete =
+                          appState.listOfExpenses[indexToEdit];
+                      double amountToDelete = expenseToDelete.amount;
+                      String cat = appState
+                          .getCategory(appState.listOfExpenses[indexToEdit]);
 
-                        //expenses.removeAt(index);
-                        appState.listOfExpenses.remove(expenseToDelete);
-                        appState
-                            .deleteFromTotalExpenses(expenseToDelete.amount);
-                        //now need to add it back into the list at indexToEdit positon
+                      setState(() {});
 
-                        
+                      if (expenseToDelete.expenseID.isNotEmpty) {
+                        DocumentReference docToDelete = FirebaseFirestore
+                            .instance
+                            .collection("Expenses")
+                            .doc(expenseToDelete.expenseID);
+                        docToDelete.delete();
 
-                        if (dateToAdd != dateEdited) {
-                          dateToAdd = Date(
-                              day: pickedDate!.day,
-                              month: pickedDate!.month,
-                              year: pickedDate!.year);
-                        }
-
-                        Expenses expensetoAdd = Expenses(
-                            date: dateToAdd,
-                            category: category,
-                            amount: amountToAdd);
-                        if (category == "Housing") {
-                          appState.addToHousingAmount(amountToAdd);
-                        } else if (category == "Transportation") {
-                          appState.addToTransportationAmount(amountToAdd);
-                        } else if (category == "Food") {
-                          appState.addToFoodAmount(amountToAdd);
-                        } else if (category == "Utilities") {
-                          appState.addToUtilitiesAmount(amountToAdd);
-                        } else if (category == "Insurance") {
-                          appState.addToInsuranceAmount(amountToAdd);
-                        } else if (category == "Healthcare") {
-                          appState.addToHealthcareAmount(amountToAdd);
-                        } else if (category == "Savings") {
-                          appState.addToSavingsAmount(amountToAdd);
-                        } else if (category == "Personal") {
-                          appState.addToPersonalAmount(amountToAdd);
-                        } else if (category == "Entertainment") {
-                          appState.addToEntertainmentAmount(amountToAdd);
-                        } else {
-                          appState.addToMiscAmount(amountToAdd);
-                        }
-
-                        appState.listOfExpenses
-                            .insert(indexToEdit, expensetoAdd);
-                        //expenses.add(expensetoAdd);
-                        yearController.clear();
-                        amountController.clear();
-                        categoryController.clear();
-                        category = null;
-                        totalExpense += expensetoAdd.amount;
-                        appState.addToTotalExpenses(expensetoAdd.amount);
-                        editButtonPressed = false;
-                        indexToEdit = -1;
-                        appState.colorForEditButton=const Color.fromARGB(255, 234, 196, 130);
-                        appState.colorForDeleteButton=const Color.fromARGB(255, 239, 71, 71);
-                      } catch (error) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              backgroundColor: Color.fromARGB(255, 222, 157, 6),
-                              content: Row(
-                                children: [
-                                  Icon(Icons.error),
-                                  Text(
-                                      "ERROR: Please fill  all required fields",
-                                      style: TextStyle(fontSize: 14)),
-                                ],
-                              )),
-                        );
+                        int i = indexToEdit;
+                        appState.listOfExpenses.removeAt(i);
                       }
+                     
+
+                      if (dateToAdd != dateEdited) {
+                        dateToAdd = Date(
+                            day: pickedDate!.day,
+                            month: pickedDate!.month,
+                            year: pickedDate!.year);
+                      }
+
+                      Expenses expensetoAdd = Expenses(
+                        date: dateToAdd,
+                        category: category,
+                        amount: amountToAdd,
+                        expenseID: EIDtoPreserve,
+                      );
+
+                      appState.listOfExpenses.insert(indexToEdit, expensetoAdd);
+                      FirebaseAuth auth = FirebaseAuth.instance;
+                      DateTime dateAdd = DateTime(
+                          dateToAdd.year, dateToAdd.month, dateToAdd.day);
+                      Timestamp date = Timestamp.fromDate(dateAdd);
+                      final User? user = auth.currentUser;
+                      final FirebaseFirestore firestore =
+                          FirebaseFirestore.instance;
+                      CollectionReference usersCollection =
+                          firestore.collection('Expenses');
+                      if (user != null) {
+                        String? email = user.email;
+                        DocumentReference UserToAdd =
+                            usersCollection.doc(EIDtoPreserve);
+                        if (email != null) {
+                          UserToAdd.set({
+                           
+                            'userID': user.uid,
+                            'Category': category,
+                            'Amount': amountToAdd,
+                            'ExpenseID': EIDtoPreserve,
+                            'Date': date,
+                          });
+                        }
+                        ;
+                      }
+
+                      yearController.clear();
+                      amountController.clear();
+                      categoryController.clear();
+
+                      editButtonPressed = false;
+                      indexToEdit = -1;
+                      appState.colorForEditButton =
+                          const Color.fromARGB(255, 234, 196, 130);
+                      appState.colorForDeleteButton =
+                          const Color.fromARGB(255, 239, 71, 71);
+                     
+
+                     appState.loadingOn();
+                     
+                      await appState.DeleteToCategoryAmount(
+                          amountToDelete, cat);
+                      await appState.removingFromTotalExpenses(amountToDelete);
+                      await appState.AddToCagtegoryAmount(
+                          amountToAdd, category);
+                      await appState.addFromTotalExpenses(amountToAdd);
+                       await appState.getCatTotal();
+                       appState.loadingOf();
+                       
+
+                      category = null;
+                      
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
+                         SnackBar(
                             backgroundColor: Color.fromARGB(255, 222, 157, 6),
+                            duration: Duration(seconds: 1),
                             content: Row(
                               children: [
-                                Icon(Icons.error),
-                                Text(
-                                    "ERROR: Please fill eee all required fields",
-                                    style: TextStyle(fontSize: 14)),
+                                Icon(Icons.error,size: 24*scaleW,),
+                                Text("ERROR: Please fill all required fields",
+                                    style: TextStyle(fontSize: 14*scaleW)),
                               ],
                             )),
                       );
                     }
-
-                    // ScaffoldMessenger.of(context).showSnackBar(
-                    //const SnackBar(
-                    // backgroundColor: Color.fromARGB(255, 222, 157, 6),
-                    // content: Row(
-                    //children: [
-                    //Icon(Icons.error),
-                    // Text(
-                    //   "ERROR: Please fill in all required fields",
-                    // style: TextStyle(fontSize: 14)),
-                    // ],
-                    //)),
-                    //);
-                  }),
-                  icon: Icon(Icons.check),
+                  },
+                  icon: Icon(Icons.check,size:24*scaleW),
                   style: ButtonStyle(
                       backgroundColor: WidgetStatePropertyAll<Color>(
                           appState.scheme.secondaryContainer)),
                   label: Text(
                     "Confirm",
                     style:
-                        TextStyle(color: appState.scheme.onSecondaryContainer),
+                        TextStyle(color: appState.scheme.onSecondaryContainer,fontSize: 14*scaleW),
                   ),
                 ),
               ]
             ],
           ),
-          const SizedBox(height: 40),
+           SizedBox(height: 40*scaleH),
           Row(
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
-              const SizedBox(
-                width: 15,
+               SizedBox(
+                width: 15*scaleW,
               ),
               Expanded(
                 flex: 1,
                 child: Transform.scale(
-                  scale: 1,
-                  child: ElevatedButton.icon(
+                  
+                  scale:1,
+                  child: 
+                  ElevatedButton.icon(
                     style: ButtonStyle(
                         backgroundColor: WidgetStatePropertyAll<Color>(
                             appState.scheme.tertiaryContainer)),
@@ -672,25 +731,33 @@ class _ExpensesPageState extends State<ExpensesPage> {
                     label: Text(
                       sortAmount,
                       style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 10*scaleW,
                           color: appState.scheme.onTertiaryContainer),
                     ),
-                    icon: Transform.flip(
+                    
+                    icon: 
+                    
+                    Transform.flip(
                         flipY: SortAmount,
+                        
                         child: Icon(
                           Icons.swap_vert,
-                          color: appState.scheme.onTertiaryContainer,
+                          color: appState.scheme.onTertiaryContainer,size:24*scaleW,
                         )),
+                        
                   ),
+
+                  
                 ),
               ),
-              const SizedBox(
-                width: 30,
+               SizedBox(
+                width: 20*scaleW,
               ),
               Expanded(
                 flex: 1,
                 child: Transform.scale(
-                  scale: 1,
+                  
+                  scale:1,
                   child: ElevatedButton.icon(
                     style: ButtonStyle(
                         backgroundColor: WidgetStatePropertyAll<Color>(
@@ -699,164 +766,164 @@ class _ExpensesPageState extends State<ExpensesPage> {
                     label: Text(
                       sortDate,
                       style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 10*scaleW,
                           color: appState.scheme.onTertiaryContainer),
                     ),
                     icon: Transform.flip(
                         flipY: SortDate,
-                        child: Icon(Icons.swap_vert,
+                        child: Icon(Icons.swap_vert,size:24*scaleW,
                             color: appState.scheme.onTertiaryContainer)),
                   ),
                 ),
               ),
-              const SizedBox(
-                width: 30,
+               SizedBox(
+                width: 20*scaleW,
               ),
               Expanded(
                 flex: 1,
                 child: Transform.scale(
-                  scale: 1,
+                  
+                  scale:1,
                   child: ElevatedButton.icon(
+                    
                     style: ButtonStyle(
                         backgroundColor: WidgetStatePropertyAll<Color>(
                             appState.scheme.tertiaryContainer)),
+                    
                     onPressed: sortCategoryMethod,
                     label: Text(
                       sortCategory,
                       style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 10*scaleW*0.9,
                           color: appState.scheme.onTertiaryContainer),
                     ),
-                    icon: Transform.flip(
-                        flipX: SortCategory,
-                        child: Icon(Icons.sort_by_alpha,
-                            color: appState.scheme.onTertiaryContainer)),
+                    icon: Image.asset(whichCatSortString,height:24*scaleW ),
+                    
+                    
+                    
                   ),
                 ),
               ),
-              const SizedBox(
-                width: 15,
+               SizedBox(
+                width: 15*scaleW,
               ),
             ],
           ),
-          const SizedBox(height: 40),
+           SizedBox(height: 40*scaleH),
           Expanded(
             child: ListView.builder(
-              itemCount: expenses.length,
+              itemCount: appState.listOfExpenses.length,
               itemBuilder: (context, index) {
                 return Column(
                   children: [
                     ListTile(
-                        contentPadding: EdgeInsets.all(16),
+                        contentPadding: EdgeInsets.all(16*scaleH),
                         tileColor: appState.scheme.primaryContainer,
-                        leading: Icon(Icons.money),
+                        leading: Icon(Icons.monetization_on_outlined,size: 24*scaleW,),
                         title: Text(
-                          "\$${appState.getAmount(expenses[index]).toStringAsFixed(2)}",
+                          "\$${appState.getAmount(appState.listOfExpenses[index]).toStringAsFixed(2)}",
                           style: TextStyle(
-                              color: appState.scheme.onPrimaryContainer),
+                              color: appState.scheme.onPrimaryContainer,fontSize: 14*scaleW),
                         ),
                         subtitle: Text(
-                            "${appState.getDate(expenses[index])} \n${appState.getCategory(expenses[index])}"),
+                            "${appState.getDate(appState.listOfExpenses[index])} \n${appState.getCategory(appState.listOfExpenses[index])}",style: TextStyle(fontSize:12*scaleW),),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Transform.scale(
-                              scale: 0.75,
+                             
+                              scale:0.75,
                               child: ElevatedButton(
+                                
                                 style: ButtonStyle(
                                     backgroundColor:
-                                        WidgetStatePropertyAll<Color>(appState.colorForEditButton)),
+                                        WidgetStatePropertyAll<Color>(
+                                            appState.colorForEditButton)),
                                 onPressed: () => setState(() {
                                   if (editButtonPressed == false) {
                                     amountController.text =
-                                        "${appState.getAmount(expenses[index]).toStringAsFixed(2)}";
+                                        "${appState.getAmount(appState.listOfExpenses[index]).toStringAsFixed(2)}";
                                     yearController.text =
-                                        "${appState.getDate(expenses[index]).month}/${appState.getDate(expenses[index]).day}/${appState.getDate(expenses[index]).year}";
+                                        "${appState.getDate(appState.listOfExpenses[index]).month}/${appState.getDate(appState.listOfExpenses[index]).day}/${appState.getDate(appState.listOfExpenses[index]).year}";
                                     categoryController.text =
-                                        "${appState.getCategory(expenses[index])}";
+                                        "${appState.getCategory(appState.listOfExpenses[index])}";
                                     editButtonPressed = true;
                                     indexToEdit = index;
-                                    dateEdited =
-                                        appState.getDate(expenses[index]);
+                                    dateEdited = appState.getDate(
+                                        appState.listOfExpenses[index]);
                                     dateToEdit =
-                                        "${appState.getDate(expenses[index]).month}/${appState.getDate(expenses[index]).day}/${appState.getDate(expenses[index]).year}";
+                                        "${appState.getDate(appState.listOfExpenses[index]).month}/${appState.getDate(appState.listOfExpenses[index]).day}/${appState.getDate(appState.listOfExpenses[index]).year}";
                                     categoryToEdit = categoryController.text;
-                                    
-                                    appState.colorForEditButton=const Color.fromARGB(255, 232, 164, 45);
-                                    appState.colorForDeleteButton=const Color.fromARGB(255, 237, 143, 143);
-                                    
+                                    EIDtoPreserve = appState
+                                        .listOfExpenses[index].expenseID;
+                                    appState.colorForEditButton =
+                                        const Color.fromARGB(255, 232, 164, 45);
+                                    appState.colorForDeleteButton =
+                                        const Color.fromARGB(
+                                            255, 237, 143, 143);
                                   } else {
                                     indexToEdit = -1;
                                     yearController.clear();
                                     amountController.clear();
                                     categoryController.clear();
                                     editButtonPressed = false;
-                                    appState.colorForEditButton=const Color.fromARGB(255, 234, 196, 130);
-                                    appState.colorForDeleteButton=const Color.fromARGB(255, 239, 71, 71);
+                                    appState.colorForEditButton =
+                                        const Color.fromARGB(
+                                            255, 234, 196, 130);
+                                    appState.colorForDeleteButton =
+                                        const Color.fromARGB(255, 239, 71, 71);
                                   }
                                 }),
-                                child: Icon(Icons.edit,
+                                child: Icon(Icons.edit,size: 24*scaleW,
                                     color:
                                         appState.scheme.onSecondaryContainer),
                               ),
                             ),
 
-                            //SizedBox(width:5),
+                            
 
                             Transform.scale(
-                              scale: 0.75,
+                             
+                             scale:0.75,
                               child: ElevatedButton(
                                   style: ButtonStyle(
                                       backgroundColor:
-                                          WidgetStatePropertyAll<Color>(appState.colorForDeleteButton)),
-                                  onPressed: () => setState(() {
-                                        if(editButtonPressed==false){
-                                        Expenses expenseToDelete =
-                                            expenses[index];
-                                        double amountToDelete =
-                                            expenseToDelete.amount;
-                                        String cat = appState
-                                            .getCategory(expenses[index]);
-                                        if (cat == "Housing") {
-                                          appState.removeHousingAmount(
-                                              amountToDelete);
-                                        } else if (cat == "Transportation") {
-                                          appState.removeTransportationAmount(
-                                              amountToDelete);
-                                        } else if (cat == "Food") {
-                                          appState
-                                              .removeFoodAmount(amountToDelete);
-                                        } else if (cat == "Utilities") {
-                                          appState.removeUtilitiesAmount(
-                                              amountToDelete);
-                                        } else if (cat == "Insurance") {
-                                          appState.removeInsuranceAmount(
-                                              amountToDelete);
-                                        } else if (cat == "Healthcare") {
-                                          appState.removeHealthcareAmount(
-                                              amountToDelete);
-                                        } else if (cat == "Savings") {
-                                          appState.removeSavingsAmount(
-                                              amountToDelete);
-                                        } else if (cat == "Personal") {
-                                          appState.removePersonalAmount(
-                                              amountToDelete);
-                                        } else if (cat == "Entertainment") {
-                                          appState.removeEntertainmentAmount(
-                                              amountToDelete);
-                                        } else {
-                                          appState
-                                              .removeMiscAmount(amountToDelete);
-                                        }
+                                          WidgetStatePropertyAll<Color>(
+                                              appState.colorForDeleteButton)),
+                                  onPressed: () async {
+                                    if (!mounted) return; 
+                                    if (editButtonPressed == false) {
+                                      Expenses expenseToDelete =
+                                          appState.listOfExpenses[index];
+                                      double amountToDelete =
+                                          expenseToDelete.amount;
+                                      String cat = appState.getCategory(
+                                          appState.listOfExpenses[index]);
 
-                                        //expenses.removeAt(index);
-                                        appState.listOfExpenses
-                                            .remove(expenseToDelete);
-                                        appState.deleteFromTotalExpenses(
-                                            expenseToDelete.amount);
-                                        }
-                                      }),
-                                  child: Icon(Icons.delete,
+                                    
+                                      if (expenseToDelete
+                                          .expenseID.isNotEmpty) {
+                                        DocumentReference docToDelete =
+                                            FirebaseFirestore.instance
+                                                .collection("Expenses")
+                                                .doc(expenseToDelete.expenseID);
+                                        docToDelete.delete();
+
+                                        int i = index;
+                                        appState.listOfExpenses.removeAt(i);
+
+                                        await appState.DeleteToCategoryAmount(
+                                            amountToDelete, cat);
+                                        await appState
+                                            .removingFromTotalExpenses(
+                                                expenseToDelete.amount);
+                                        await appState.getCatTotal();
+
+                                        setState(() {});
+                                      } else {}
+                                    }
+                                  },
+                                  child: Icon(Icons.delete,size:24*scaleW,
                                       color: appState
                                           .scheme.onSecondaryContainer)),
                             )
@@ -874,4 +941,6 @@ class _ExpensesPageState extends State<ExpensesPage> {
       )),
     );
   }
+
+  String categorySelect(String string) => category = string;
 }

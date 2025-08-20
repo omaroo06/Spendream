@@ -12,14 +12,4 @@ void main() async {
 
   runApp(MyApp());
 } 
-
-
-// Hello
-
-//make flask API route for login database
-
-
-//NEXT STEPS: Make dropdown for category, 
-//make sort button which maybe for now sorts the expenses by amount spent (greatest to least or vice versa)
-//make budgeting screen which for now just diplays the total money spent and how its distrbuted for each category.
-//Develop backend
+ 
